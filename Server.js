@@ -32,7 +32,7 @@ mqtt.createServer(function(client) {
   });
 
   client.on('publish', function(packet) {
-    console.log("PUBLISH(%s): %j", client.id, packet);
+    //console.log("PUBLISH(%s): %j", client.id, packet);
     for (var k in self.clients) {
       var c = self.clients[k]
         , publish = false;
@@ -68,4 +68,4 @@ mqtt.createServer(function(client) {
     client.stream.end();
     console.log(e);
   });
-}).listen(process.argv[2] || 1883);
+}).listen(1883);
