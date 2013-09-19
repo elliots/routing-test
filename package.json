@@ -13,6 +13,7 @@
     "underscore": "~1.5.2",
     "optimist": "~0.6.0",
     "mqtt-rpc": "git://github.com/wolfeidau/mqtt-rpc.git",
-    "log4js": "~0.6.8"
+    "log4js": "~0.6.8",
+    "underscore.string": "~2.3.3"
   }
 }

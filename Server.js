@@ -19,10 +19,13 @@ mqtt.createServer(function(client) {
 
     console.log("SUBSCRIBE(%s): %j", client.id, packet);
 
+
     for (var i = 0; i < packet.subscriptions.length; i++) {
       var qos = packet.subscriptions[i].qos
         , topic = packet.subscriptions[i].topic
         , reg = new RegExp(topic.replace('$', '\\$').replace('+', '[^\/]+').replace('#', '.+') + '$');
+
+        console.log('xxxxxregex', topic, topic.replace('$', '\\$').replace(/\+/g, '[^\/]+').replace(/#/g, '.+') + '$');
 
       granted.push(qos);
       client.subscriptions.push(reg);
@@ -32,7 +35,7 @@ mqtt.createServer(function(client) {
   });
 
   client.on('publish', function(packet) {
-    //console.log("PUBLISH(%s): %j", client.id, packet);
+    console.log("PUBLISH(%s): %j", client.id, packet);
     for (var k in self.clients) {
       var c = self.clients[k]
         , publish = false;

@@ -6,7 +6,7 @@ Log = function(name) {
 };
 
 // Start MQTT
-require('./Server');
+//require('./Server');
 
 // Start Conductor
 new require('./Conductor')();

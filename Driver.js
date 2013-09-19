@@ -46,46 +46,15 @@ function Driver(cfg) {
 
     function createFakeDevice(id, driver, block) {
 
-        var deviceTopic = '$client/device/' + id;
+        var deviceTopic = '$client/block/' + block + '/device/' + id;
 
-        client.subscribe(deviceTopic + '/route');
         client.subscribe(deviceTopic + '/actuate');
         client.subscribe(deviceTopic + '/ping');
-
-        var active = false;
-        // If a route update for this device lists our block id, we're the active actuation channel.
-        function onRoute(route) {
-            if (active ^ route.block === block) {
-                // Active state has changed
-
-                active = route.block === block;
-                log.info((active?'':'IN') + 'ACTIVE for ' + id);
-
-               /* if (active) {
-                    // Acknowledge we are the new active channel.
-                    client.publish(deviceTopic + '/route/acknowledge', {
-                        driver: 'fake-' + driver + '-driver',
-                        block: block,
-                        device: {
-                            G: id,
-                            V: 666,
-                            D: 1
-                        }
-                    });
-                }*/
-
-            }
-
-        }
 
         // We only actuate if we are the active channel. Otherwise it's safe to ignore,
         // as a failed actuation by a neighbour should result in a route update then retry.
         function onActuate(data) {
-            if (!active) {
-                return;
-            } else {
-                log.info("Actuating ", id, 'with', data);
-            }
+            log.info("Actuating ", id, 'with', data);
         }
 
         function onPing(payload) {
@@ -100,9 +69,7 @@ function Driver(cfg) {
             if (topic.indexOf(deviceTopic) === 0) { // It's related to this device
                 topic = topic.substring(deviceTopic.length+1); // Strip the beginning...
 
-                if (topic === 'route') {
-                    onRoute(payload);
-                } else if (topic === 'actuate') {
+                if (topic === 'actuate') {
                     onActuate(payload);
                 } else if (topic === 'ping') {
                     onPing(payload);

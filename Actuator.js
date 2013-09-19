@@ -34,6 +34,7 @@ function Actuator() {
                 log.info('Actuating', device);
 
                 client.publish('$client/device/' + device + '/actuate', {
+                    device: device,
                     time: new Date().getTime(),
                     data: 'Howdy ' + actuationId++
                 });
