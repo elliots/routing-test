@@ -5,8 +5,9 @@ Log = function(name) {
     return log4js.getLogger(name);
 };
 
-// Start MQTT
-//require('./Server');
+var log = Log('Routing Test');
+
+log.warn("Make sure an MQTT server is running at localhost:1883!");
 
 // Start Conductor
 new require('./Conductor')();

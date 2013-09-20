@@ -9,23 +9,17 @@
 
 var _ = require('underscore');
 var _s = require('underscore.string');
+var mqttrpc = require('mqtt-rpc');
 
 function Conductor() {
 
-    var client = require('mqtt').createClient(1883, 'localhost', {keepalive: 10000});
-    client._publish = client.publish;
-    client.publish = function(topic, packet) {
-        client._publish(topic, JSON.stringify(packet));
-    };
+    var mqtt = require('mqtt').createClient(1883, 'localhost', {keepalive: 10000});
+    var server = mqttrpc.server(mqtt);
+    var client = mqttrpc.client(mqtt);
 
     var log = Log('Conductor');
 
-    client.subscribe('$client/block/+/device/+/seen');
-    client.subscribe('$client/device/+/actuate');
-
     var routes = {};
-
-    var ackTimeouts = {};
 
     function onDeviceSeen(payload) {
 
@@ -43,27 +37,22 @@ function Conductor() {
         routes[payload.device] = r;
     }
 
-    function onActuate(payload) {
-        if (routes[payload.device].length === 0) {
-            log.warn('Could not actuate! No routes to ', payload.device);
+    server.provide('$client/device/+', 'actuate', function (payload, cb) {
+        if (!routes[payload.device] || routes[payload.device].length === 0) {
+            cb('No routes to device', new Date());
         } else {
             var route = routes[payload.device][0];
-            log.info('Actuating ', payload.device, 'via', route.block);
-            client.publish('$client/block/' + route.block + '/device/' + payload.device + '/actuate', payload);
+            log.debug('Actuating', payload.device, 'via', route.block);
+            client.callRemote('$client/block/' + route.block + '/device/' + payload.device, 'actuate', payload, cb);
         }
-    }
-
-    client.on('message', function(topic, packet) {
-        var payload = JSON.parse(packet);
-        if (_s.endsWith(topic, '/seen')) {
-            onDeviceSeen(payload);
-            // Retransmit seen messages to device id
-            client.publish('$client/device/' + payload.device + '/seen', payload);
-        } else {
-            onActuate(payload);
-        }
-
     });
+
+    server.subscribe('$client/block/+/device/+/seen', function(payload) {
+        onDeviceSeen(payload);
+        // Retransmit seen messages to device id
+        client.publish('$client/device/' + payload.device + '/seen', payload);
+    });
+
 }
 
 module.exports = Conductor;

@@ -2,41 +2,44 @@
 
 
 var _ = require('underscore');
+var mqttrpc = require('mqtt-rpc');
 
 function Actuator() {
     var log = Log('Actuator');
 
-    var client = require('mqtt').createClient(1883, 'localhost', {keepalive: 10000});
-    client._publish = client.publish;
-    client.publish = function(topic, packet) {
-        client._publish(topic, JSON.stringify(packet));
-    };
+    var mqtt = require('mqtt').createClient(1883, 'localhost', {keepalive: 10000});
+    var server = mqttrpc.server(mqtt);
+    var client = mqttrpc.client(mqtt);
 
-    client.subscribe('$client/device/+/seen');
-
-    var devices = [];
-
-    client.on('message', function(topic, packet) {
-        var payload = JSON.parse(packet);
-
-        if (!_.contains(devices, payload.device)) {
+    server.subscribe('$client/device/+/seen', function(payload) {
+        if (payload.device && !_.contains(devices, payload.device)) {
             devices.push(payload.device);
             log.trace('Found new device', payload.device);
         }
     });
 
+    var devices = [];
+
     var actuationId = 0;
 
     function sendRandomActuation() {
         setTimeout(function() {
+            var start = new Date().getTime();
             if (devices.length) {
                 var device = _.shuffle(devices)[0];
-                log.info('Actuating', device);
+                log.debug('Sending actuation to', device);
 
-                client.publish('$client/device/' + device + '/actuate', {
+                client.callRemote('$client/device/' + device, 'actuate', {
                     device: device,
                     time: new Date().getTime(),
                     data: 'Howdy ' + actuationId++
+                }, function(err, payload){
+                    var end = new Date().getTime();
+                    if (err) {
+                        log.warn('Failed to actuate', device, 'in', end-start + 'ms', '-', err);
+                    } else {
+                        log.info('Actuated', device, 'in', end-start + 'ms', payload);
+                    }
                 });
             }
 
@@ -45,6 +48,15 @@ function Actuator() {
     }
     sendRandomActuation();
 
+  setTimeout(function() {
+   client.callRemote('$client/device/TESTDEVICE', 'actuate', {
+                    device: 'TESTDEVICE',
+                    time: new Date().getTime(),
+                    data: 'Howdy ' + actuationId++
+                }, function(err, data){
+                    log.info('Actuated TEST DEVICE', 'Error? '+err, data);
+                });
+}, 1000);
 }
 
 module.exports = Actuator;

@@ -25,7 +25,6 @@ mqtt.createServer(function(client) {
         , topic = packet.subscriptions[i].topic
         , reg = new RegExp(topic.replace('$', '\\$').replace('+', '[^\/]+').replace('#', '.+') + '$');
 
-        console.log('xxxxxregex', topic, topic.replace('$', '\\$').replace(/\+/g, '[^\/]+').replace(/#/g, '.+') + '$');
 
       granted.push(qos);
       client.subscriptions.push(reg);

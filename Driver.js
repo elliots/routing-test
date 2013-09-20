@@ -1,6 +1,9 @@
 var _ = require('underscore');
+var mqttrpc = require('mqtt-rpc');
 
 // Pretends to be a driver, creating a number of devices that it can actuate/ping.
+
+var DEVICE_NAMES = ['Handbag', 'Cat', 'Umbrella', 'Keys', 'Xbox'];
 
 var blockId = 0;
 
@@ -16,18 +19,17 @@ function Driver(cfg) {
 
     var log = Log(cfg.driver + ' - ' + cfg.blockId);
 
-    var client = require('mqtt').createClient(1883, 'localhost', {keepalive: 10000});
-    client._publish = client.publish;
-    client.publish = function(topic, packet) {
-        client._publish(topic, JSON.stringify(packet));
-    };
+    var mqtt = require('mqtt').createClient(1883, 'localhost', {keepalive: 10000});
+
+    var server = mqttrpc.server(mqtt);
+    var client = mqttrpc.client(mqtt);
+
     var up;
 
     this.up = function() {
         if (up) return;
         up = true;
         log.info("✅ UP");
-
     };
 
     this.down = function() {
@@ -39,42 +41,22 @@ function Driver(cfg) {
     this.up();
 
     for (var i = 0; i < cfg.devices; i++) {
-        createFakeDevice(cfg.driver + '.' + i, cfg.driver, cfg.blockId);
+        createFakeDevice(DEVICE_NAMES[i], cfg.driver, cfg.blockId);
     }
-
 
 
     function createFakeDevice(id, driver, block) {
 
         var deviceTopic = '$client/block/' + block + '/device/' + id;
 
-        client.subscribe(deviceTopic + '/actuate');
-        client.subscribe(deviceTopic + '/ping');
+        server.provide(deviceTopic, 'actuate', function (payload, cb) {
+          log.info("Actuating ", id, 'with', payload.data);
+          cb(null, new Date());
+        });
 
-        // We only actuate if we are the active channel. Otherwise it's safe to ignore,
-        // as a failed actuation by a neighbour should result in a route update then retry.
-        function onActuate(data) {
-            log.info("Actuating ", id, 'with', data);
-        }
-
-        function onPing(payload) {
-            pong(payload.pingId);
-        }
-
-        client.on('message', function(topic, packet) {
-            if (!up) return;
-
-            // ES: Some helper method around this would be nice
-            var payload = JSON.parse(packet);
-            if (topic.indexOf(deviceTopic) === 0) { // It's related to this device
-                topic = topic.substring(deviceTopic.length+1); // Strip the beginning...
-
-                if (topic === 'actuate') {
-                    onActuate(payload);
-                } else if (topic === 'ping') {
-                    onPing(payload);
-                }
-            }
+        server.provide(deviceTopic, 'ping', function (payload, cb) {
+          log.info("Ping! ", id);
+          cb(null, new Date());
         });
 
         client.publish(deviceTopic + '/register', {
@@ -87,7 +69,7 @@ function Driver(cfg) {
             }
         });
 
-        function pong(pingId) {
+        function seen(pingId) {
              client.publish(deviceTopic + '/seen', {
                 driver: driver,
                 block: block,
@@ -97,7 +79,7 @@ function Driver(cfg) {
             });
         }
 
-        setInterval(pong, 5000 + (Math.random() * 10000));
+        setInterval(seen, 5000 + (Math.random() * 10000));
     }
 }
 
