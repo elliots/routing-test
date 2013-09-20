@@ -11,16 +11,20 @@ When actuating...
    - If the block does not acknowledge delivery of the message, ???
 
 
-=== MQTT Topics Used
+### MQTT Topics Used
 
-REST API/Anything else actuating -> Controller
-$client/device/DEVICEID/actuate
+REST API/Anything else actuating ➡ Controller
 
-Controller -> Driver
-$client/block/BLOCKID/device/DEVICEID/actuate
+    $client/device/DEVICEID/actuate
 
-Driver -> Controller
-$client/block/BLOCKID/device/DEVICEID/actuate/reply
+Controller ➡ Driver
 
-Controller -> REST API/Anything else actuating
-$client/device/DEVICEID/actuate/reply
+    $client/block/BLOCKID/device/DEVICEID/actuate
+
+Driver ➡ Controller
+
+    $client/block/BLOCKID/device/DEVICEID/actuate/reply
+
+Controller ➡ REST API/Anything else actuating
+
+    $client/device/DEVICEID/actuate/reply
